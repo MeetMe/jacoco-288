@@ -1,0 +1,88 @@
+buildscript {
+    repositories {
+        mavenLocal()
+        maven { url 'http://nexus.meetmecorp.com/nexus/content/groups/public/' }
+    }
+    dependencies {
+        classpath('org.robolectric:robolectric-gradle-plugin:0.14.1') {
+            // These two generate dependency warnings against android's gradle plugin, so exclude them here:
+            exclude group: 'commons-logging', module: 'commons-logging'
+            exclude group: 'org.apache.httpcomponents', module: 'httpclient'
+        }
+    }
+}
+
+apply plugin: 'com.android.application'
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+
+    // Unit tests
+    androidTestCompile 'junit:junit:4.10'
+    androidTestCompile 'org.robolectric:robolectric:2.4'
+}
+
+android {
+    compileSdkVersion 18
+    buildToolsVersion "21.1.2"
+
+    defaultConfig {
+        applicationId "local.jhansche.jacocoandroid"
+        minSdkVersion 11
+        targetSdkVersion 18
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+        }
+        debug {
+        }
+    }
+
+    sourceSets {
+        main {}
+        androidTest.setRoot('src/test')
+    }
+}
+
+apply plugin: 'robolectric'
+apply plugin: 'jacoco'
+
+// By default, Android Gradle plugin uses JaCoCo version 0.7.1, which works great in JUnit on the JVM.
+// But that will fail on Android Lollipop/ART runtime, which requires 0.7.3 or higher.
+if (rootProject.hasProperty('jacocoVersion')) {
+    android.jacoco.version = rootProject.property('jacocoVersion')
+    jacoco.toolVersion = rootProject.property('jacocoVersion')
+} else {
+    println "Using the default JaCoCo version of: ${jacoco.toolVersion}"
+}
+
+// The built-in jacoco plugin automatically applies itself to all Test tasks
+tasks.withType(Test).whenTaskAdded {
+    it.jacoco.append = false
+    it.jacoco.classDumpFile = file("${project.buildDir}/jacoco/dump")
+}
+
+// These tasks are for generating the coverage report after JUnit+robolectric tests have executed
+tasks.create(name: "jacocoTestDebugReport", type: JacocoReport, dependsOn: "testDebug") {
+    group = "Reporting"
+    description = "Generate Jacoco coverage reports"
+
+    classDirectories = fileTree(
+            dir: "${project.buildDir}/intermediates/classes/debug/",
+            excludes: ['**/R.class',
+                       '**/R$*.class',
+                       '**/*$ViewInjector*.*',
+                       '**/BuildConfig.*',
+                       '**/Manifest*.*']
+    )
+
+    sourceDirectories = files("src/main/java", "src/debug/java")
+    executionData = files("${project.buildDir}/jacoco/testDebug.exec")
+
+    reports {
+        xml.enabled = true
+        html.enabled = true
+    }
+}
