@@ -1,7 +1,7 @@
 buildscript {
     repositories {
         mavenLocal()
-        maven { url 'http://nexus.meetmecorp.com/nexus/content/groups/public/' }
+        mavenCentral()
     }
     dependencies {
         classpath('org.robolectric:robolectric-gradle-plugin:0.14.1') {
